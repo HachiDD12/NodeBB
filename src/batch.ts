@@ -2,14 +2,40 @@ import util from 'util';
 import db from './database';
 import utils from './utils';
 
-const DEFAULT_BATCH_SIZE : number = 100;
+const DEFAULT_BATCH_SIZE = 100;
 
 // The next line calls a function in a module that has not been updated to TS yet
 // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
 const sleep = util.promisify(setTimeout);
 
-export async function processSortedSet(setKey, process, options): Promise<void> {
-    options = options || {};
+type Customfunc = (start : number, stop : number, ids : number[]) => undefined
+
+interface Progress {
+    total : unknown;
+}
+
+interface Options {
+    progress: Progress;
+    batch: number;
+    doneIf: Customfunc;
+    alwaysStartAt: number;
+    withScores: boolean;
+    interval: number;
+}
+
+const defaultOpt : Options = {
+    progress: null,
+    batch: null,
+    doneIf: null,
+    alwaysStartAt: null,
+    withScores: null,
+    interval: null,
+};
+
+export async function processSortedSet(
+    setKey : unknown, process:(ar : unknown[]) => unknown, options : Options
+): Promise<unknown> {
+    options = options || defaultOpt;
 
     if (typeof process !== 'function') {
         throw new Error('[[error:process-not-a-function]]');
@@ -17,8 +43,8 @@ export async function processSortedSet(setKey, process, options): Promise<void> 
 
     // Progress bar handling (upgrade scripts)
     if (options.progress) {
-
-        // The next line calls a function in a module that has not been updated to TS yet
+        // The next line calls a function in a module that has not been updated to TS yet,
+        // and the variable's type cannot be inferred
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
         options.progress.total = await db.sortedSetCard(setKey);
     }
@@ -30,11 +56,14 @@ export async function processSortedSet(setKey, process, options): Promise<void> 
     // The next line calls a function in a module that has not been updated to TS yet
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
     if (db.processSortedSet && typeof options.doneIf !== 'function' && !utils.isNumber(options.alwaysStartAt)) {
-        return await db.processSortedSet(setKey, process, options);
+        // The next line calls a function in a module that has not been updated to TS yet
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+        const retval = await db.processSortedSet(setKey, process, options) as unknown;
+        return retval;
     }
 
     // custom done condition
-    options.doneIf = typeof options.doneIf === 'function' ? options.doneIf : function () {};
+    options.doneIf = typeof options.doneIf === 'function' ? options.doneIf : function () { return undefined; } as Customfunc;
 
     let start = 0;
     let stop = options.batch - 1;
@@ -45,8 +74,11 @@ export async function processSortedSet(setKey, process, options): Promise<void> 
 
     while (true) {
         /* eslint-disable no-await-in-loop */
-        const ids = await db[`getSortedSetRange${options.withScores ? 'WithScores' : ''}`](setKey, start, stop);
-        if (!ids.length || options.doneIf(start, stop, ids)) {
+        // The next line calls a function in a module that has not been updated to TS yet
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+        const ids = await db[`getSortedSetRange${options.withScores ? 'WithScores' : ''}`](setKey, start, stop) as number[];
+        const l : number = ids.length;
+        if (l === 0 || options.doneIf(start, stop, ids)) {
             return;
         }
         await process(ids);
@@ -60,10 +92,10 @@ export async function processSortedSet(setKey, process, options): Promise<void> 
             await sleep(options.interval);
         }
     }
-};
+}
 
-exports.processArray = async function (array, process, options) {
-    options = options || {};
+export async function processArray(array, process : (ar:unknown[]) => unknown, options : Options) {
+    options = options || defaultOpt;
 
     if (!Array.isArray(array) || !array.length) {
         return;
@@ -79,7 +111,7 @@ exports.processArray = async function (array, process, options) {
     }
 
     while (true) {
-        const currentBatch = array.slice(start, start + batch);
+        const currentBatch : unknown[] = array.slice(start, start + batch);
 
         if (!currentBatch.length) {
             return;
@@ -93,6 +125,4 @@ exports.processArray = async function (array, process, options) {
             await sleep(options.interval);
         }
     }
-};
-
-require('./promisify')(exports);
+}
