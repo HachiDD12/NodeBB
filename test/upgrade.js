@@ -2,6 +2,7 @@
 
 const assert = require('assert');
 
+const { done } = require('nprogress');
 const db = require('./mocks/databasemock');
 const upgrade = require('../src/upgrade');
 

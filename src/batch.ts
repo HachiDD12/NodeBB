@@ -4,14 +4,14 @@ import utils from './utils';
 
 const DEFAULT_BATCH_SIZE = 100;
 
-// The next line calls a function in a module that has not been updated to TS yet
-// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+
 const sleep = util.promisify(setTimeout);
 
-type Customfunc = (start : number, stop : number, ids : number[]) => undefined
+type Customfunc = (start? : number, stop? : number, ids? : number[]) => boolean
+// type Customfunc = Function
 
 interface Progress {
-    total : unknown;
+    total : number;
 }
 
 interface Options {
@@ -33,7 +33,7 @@ const defaultOpt : Options = {
 };
 
 export async function processSortedSet(
-    setKey : unknown, process:(ar : unknown[]) => unknown, options : Options
+    setKey : string, process : ((ar : number[], next? : () => void) => unknown) | undefined, options : Options
 ): Promise<unknown> {
     options = options || defaultOpt;
 
@@ -46,7 +46,7 @@ export async function processSortedSet(
         // The next line calls a function in a module that has not been updated to TS yet,
         // and the variable's type cannot be inferred
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-        options.progress.total = await db.sortedSetCard(setKey);
+        options.progress.total = await db.sortedSetCard(setKey) as number;
     }
 
     options.batch = options.batch || DEFAULT_BATCH_SIZE;
@@ -78,7 +78,7 @@ export async function processSortedSet(
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
         const ids = await db[`getSortedSetRange${options.withScores ? 'WithScores' : ''}`](setKey, start, stop) as number[];
         const l : number = ids.length;
-        if (l === 0 || options.doneIf(start, stop, ids)) {
+        if (!l || options.doneIf(start, stop, ids)) {
             return;
         }
         await process(ids);
@@ -94,7 +94,11 @@ export async function processSortedSet(
     }
 }
 
-export async function processArray(array, process : (ar:unknown[]) => unknown, options : Options) {
+export async function processArray(
+    array : number[],
+    process : ((ar : number[], next? : () => void) => unknown) | undefined,
+    options : Options
+) {
     options = options || defaultOpt;
 
     if (!Array.isArray(array) || !array.length) {
@@ -111,7 +115,7 @@ export async function processArray(array, process : (ar:unknown[]) => unknown, o
     }
 
     while (true) {
-        const currentBatch : unknown[] = array.slice(start, start + batch);
+        const currentBatch : number[] = array.slice(start, start + batch);
 
         if (!currentBatch.length) {
             return;

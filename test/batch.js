@@ -24,7 +24,6 @@ describe('batch', () => {
             items.forEach((item) => {
                 total += item.score;
             });
-
             setImmediate(next);
         }, {
             withScores: true,
