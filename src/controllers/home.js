@@ -9,6 +9,9 @@ const url_1 = __importDefault(require("url"));
 const plugins_1 = __importDefault(require("../plugins"));
 const meta_1 = __importDefault(require("../meta"));
 const user_1 = __importDefault(require("../user"));
+// type Request = express.Request;
+// type Response = express.Response;
+// type Next = express.NextFunction;
 function adminHomePageRoute() {
     // The next line calls a function in a module that has not been updated to TS yet
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call

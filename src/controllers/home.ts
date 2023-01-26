@@ -1,5 +1,5 @@
 import url from 'url';
-import * as express from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { SettingsObject } from '../types';
 // import { Url } from 'url';
 import plugins from '../plugins';
@@ -7,9 +7,9 @@ import meta from '../meta';
 import user from '../user';
 
 type urlparse = url.UrlWithParsedQuery;
-type Request = express.Request;
-type Response = express.Response;
-type Next = express.NextFunction;
+// type Request = express.Request;
+// type Response = express.Response;
+// type Next = express.NextFunction;
 
 function adminHomePageRoute() : string {
     // The next line calls a function in a module that has not been updated to TS yet
@@ -31,7 +31,7 @@ async function getUserHomeRoute(uid : number) : Promise<string> {
     return route;
 }
 
-export async function rewrite(req : Request & SettingsObject, res : Response, next : Next) {
+export async function rewrite(req : Request & SettingsObject, res : Response, next : NextFunction) {
     if (req.path !== '/' && req.path !== '/api/' && req.path !== '/api') {
         return next();
     }
@@ -67,7 +67,11 @@ export async function rewrite(req : Request & SettingsObject, res : Response, ne
     next();
 }
 
-export async function pluginHook(req: Request, res, next: Next):Promise<void> {
+interface Rec {
+    homePageRoute: string;
+}
+
+export async function pluginHook(req: Request, res : Response<unknown, Rec>, next: NextFunction):Promise<void> {
     const hook = `action:homepage.get:${res.locals.homePageRoute}`;
 
     await plugins.hooks.fire(hook, {
